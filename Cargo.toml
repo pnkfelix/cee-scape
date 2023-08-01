@@ -3,6 +3,12 @@ name = "cee-scape"
 version = "0.1.0"
 edition = "2021"
 resolver = "2"
+license = "MIT OR Apache-2.0"
+description = "The cee-scape crate provides Rust access to `setjmp` and `sigsetjmp` functionality"
+homepage = "https://github.com/pnkfelix/cee-scape"
+documentation = "https://github.com/pnkfelix/cee-scape"
+repository = "https://github.com/pnkfelix/cee-scape"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
