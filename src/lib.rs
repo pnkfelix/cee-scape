@@ -314,7 +314,9 @@ where
         // Note: we never call _setjmp from Rust code, just from the assembly
         // block below.
         extern "C" {
-            fn _setjmp(env: JmpBuf) -> c_int;
+            #[cfg_attr(target_os = "macos", link_name="_setjmp")]
+            #[cfg_attr(target_os = "linux", link_name="_setjmp")]
+            fn find_your_targets_setjmp(env: JmpBuf) -> c_int;
         }
         std::arch::asm!(
             "mov rdi, r12",  // move jbuf_ptr into argument position for setjmp call
@@ -325,7 +327,7 @@ where
             "mov rsi, r13",  // ... and move callback ptrs into position...
             "call {c2r}",    // ... and invoke the callback
             "1:",            // at this point, rax carries the return value (from either outcome)
-            setjmp = sym _setjmp,
+            setjmp = sym find_your_targets_setjmp,
             c2r = sym call_from_c_to_rust::<F>,
             // we use r12 and r13 explicitly as they are always callee-save and
             // thus will be preserved across the call to setjmp.
@@ -363,7 +365,9 @@ where
         // Note: we never call _setjmp from Rust code, just from the assembly
         // block below.
         extern "C" {
-            fn __sigsetjmp(env: SigJmpBuf, savemask: c_int) -> c_int;
+            #[cfg_attr(target_os = "macos", link_name="sigsetjmp")]
+            #[cfg_attr(target_os = "linux", link_name="__sigsetjmp")]
+            fn find_your_targets_sigsetjmp(env: SigJmpBuf, savemask: c_int) -> c_int;
         }
         std::arch::asm!(
             // savemask is already in position rsi..
@@ -375,7 +379,7 @@ where
             "mov rsi, r13",  // ... and move callback ptrs into position...
             "call {c2r}",    // ... and invoke the callback
             "1:",            // at this point, rax carries the return value (from either outcome)
-            setjmp = sym __sigsetjmp,
+            setjmp = sym find_your_targets_sigsetjmp,
             c2r = sym call_from_c_to_rust::<F>,
             in("rsi") savemask,
             // we use r12 and r13 explicitly as they are always callee-save and
