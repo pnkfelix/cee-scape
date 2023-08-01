@@ -314,8 +314,8 @@ where
         // Note: we never call _setjmp from Rust code, just from the assembly
         // block below.
         extern "C" {
-            #[cfg_attr(target_os = "macos", link_name="_setjmp")]
-            #[cfg_attr(target_os = "linux", link_name="_setjmp")]
+            #[cfg_attr(target_os = "macos", link_name = "_setjmp")]
+            #[cfg_attr(target_os = "linux", link_name = "_setjmp")]
             fn find_your_targets_setjmp(env: JmpBuf) -> c_int;
         }
         std::arch::asm!(
@@ -365,8 +365,8 @@ where
         // Note: we never call _setjmp from Rust code, just from the assembly
         // block below.
         extern "C" {
-            #[cfg_attr(target_os = "macos", link_name="sigsetjmp")]
-            #[cfg_attr(target_os = "linux", link_name="__sigsetjmp")]
+            #[cfg_attr(target_os = "macos", link_name = "sigsetjmp")]
+            #[cfg_attr(target_os = "linux", link_name = "__sigsetjmp")]
             fn find_your_targets_sigsetjmp(env: SigJmpBuf, savemask: c_int) -> c_int;
         }
         std::arch::asm!(
