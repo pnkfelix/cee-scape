@@ -514,4 +514,32 @@ mod tests {
             7
         );
     }
+
+    #[cfg(feature = "test_c_integration")]
+    #[test]
+    fn check_c_layout() {
+        // This type is defined in test_c_integration
+        #[repr(C)]
+        #[derive(Copy, Clone, Default, Debug)]
+        struct LayoutOfJmpBufs {
+            jb_size: usize,
+            jb_align: usize,
+            sigjb_size: usize,
+            sigjb_align: usize,
+        }
+
+        extern "C" {
+            fn get_c_jmpbuf_layout() -> LayoutOfJmpBufs;
+        }
+
+        let cinfo = unsafe { get_c_jmpbuf_layout() };
+        // Dump the info so that if the test fails the right values are easy
+        // enough to find.
+        eprintln!("Note: C jmp_buf/sigjmp_buf layout info: {cinfo:?}");
+
+        assert_eq!(cinfo.jb_size, core::mem::size_of::<JmpBufStruct>());
+        assert_eq!(cinfo.jb_align, core::mem::align_of::<JmpBufStruct>());
+        assert_eq!(cinfo.sigjb_size, core::mem::size_of::<SigJmpBufStruct>());
+        assert_eq!(cinfo.sigjb_align, core::mem::align_of::<SigJmpBufStruct>());
+    }
 }
