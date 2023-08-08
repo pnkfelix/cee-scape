@@ -318,21 +318,28 @@ where
             #[cfg_attr(target_os = "linux", link_name = "_setjmp")]
             fn find_your_targets_setjmp(env: JmpBuf) -> c_int;
         }
+        let setjmp = find_your_targets_setjmp;
+        let c2r = call_from_c_to_rust::<F>;
         std::arch::asm!(
             "mov rdi, r12",  // move jbuf_ptr into argument position for setjmp call
-            "call {setjmp}", // fills in jbuf; future longjmp calls go here
+            "call {tmp}", // fills in jbuf; future longjmp calls go here
             "test eax, eax", // inspect return value of setjmp
             "jne 1f",        // if non-zero, skip the callback invocation
             "mov rdi, r12",  // otherwise, move jbuf ptr into position...
             "mov rsi, r13",  // ... and move callback ptrs into position...
-            "call {c2r}",    // ... and invoke the callback
+            "call r14",    // ... and invoke the callback
             "1:",            // at this point, rax carries the return value (from either outcome)
-            setjmp = sym find_your_targets_setjmp,
-            c2r = sym call_from_c_to_rust::<F>,
-            // we use r12 and r13 explicitly as they are always callee-save and
-            // thus will be preserved across the call to setjmp.
+
+            // we use [r12,r13,r14] explicitly as they are always callee-save
+            // and thus will be preserved across the call to setjmp.
             in("r12") jbuf_ptr,
             in("r13") closure_env_ptr,
+            in("r14") c2r,
+            // we let compiler pick this register since we don't need to preseve
+            // it across the first call.
+            tmp = in(reg) setjmp,
+            // we use rax explicitly since we just pass along return register
+            // set by the return path (be it normal return or via longjmp).
             out("rax") ret,
             clobber_abi("sysv64"),
         );
@@ -369,23 +376,29 @@ where
             #[cfg_attr(target_os = "linux", link_name = "__sigsetjmp")]
             fn find_your_targets_sigsetjmp(env: SigJmpBuf, savemask: c_int) -> c_int;
         }
+        let sigsetjmp = find_your_targets_sigsetjmp;
+        let c2r = call_from_c_to_rust::<F>;
         std::arch::asm!(
             // savemask is already in position rsi..
             "mov rdi, r12",  // move jbuf_ptr into arg position for sigsetjmp call
-            "call {setjmp}", // fills in jbuf; future longjmp calls go here.
+            "call {sigsetjmp}", // fills in jbuf; future longjmp calls go here.
             "test eax, eax", // inspect return value of setjmp
             "jne 1f",        // if non-zero, skip the callback invocation
             "mov rdi, r12",  // otherwise, move jbuf ptr into position...
             "mov rsi, r13",  // ... and move callback ptrs into position...
-            "call {c2r}",    // ... and invoke the callback
+            "call r14"  ,    // ... and invoke the callback
             "1:",            // at this point, rax carries the return value (from either outcome)
-            setjmp = sym find_your_targets_sigsetjmp,
-            c2r = sym call_from_c_to_rust::<F>,
             in("rsi") savemask,
-            // we use r12 and r13 explicitly as they are always callee-save and
-            // thus will be preserved across the call to setjmp.
+            // we use [r12,r13,r14] explicitly as they are always callee-save
+            // and thus will be preserved across the call to setjmp.
             in("r12") jbuf_ptr,
             in("r13") closure_env_ptr,
+            in("r14") c2r,
+            // we let compiler pick this register since we don't need to preseve
+            // it across the first call.
+            sigsetjmp = in(reg) sigsetjmp,
+            // we use rax explicitly since we just pass along return register
+            // set by the return path (be it normal return or via longjmp).
             out("rax") ret,
             clobber_abi("sysv64"),
         );
