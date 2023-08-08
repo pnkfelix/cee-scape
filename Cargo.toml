@@ -1,6 +1,6 @@
 [package]
 name = "cee-scape"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 resolver = "2"
 license = "MIT OR Apache-2.0"
