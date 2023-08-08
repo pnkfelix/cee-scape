@@ -341,7 +341,8 @@ where
             // we use rax explicitly since we just pass along return register
             // set by the return path (be it normal return or via longjmp).
             out("rax") ret,
-            clobber_abi("sysv64"), // clobber set reflects call activity, including {eax,rdi,rsi}
+            clobber_abi("sysv64"), // clobber abi reflects call effects, including {eax,rdi,rsi}...
+            out("rdi") _, // ... but, we write rdi before reading sigsetjmp; avoid collision.
         );
 
         ret
@@ -400,7 +401,8 @@ where
             // we use rax explicitly since we just pass along return register
             // set by the return path (be it normal return or via longjmp).
             out("rax") ret,
-            clobber_abi("sysv64"), // clobber set reflects call activity, including {eax,rdi,rsi}
+            clobber_abi("sysv64"), // clobber abi reflects call effects, including {eax,rdi,rsi}...
+            out("rdi") _, // ... but, we write rdi before reading sigsetjmp; avoid collision.
         );
 
         ret
