@@ -6,7 +6,7 @@ resolver = "2"
 license = "MIT OR Apache-2.0"
 description = "The cee-scape crate provides Rust access to `setjmp` and `sigsetjmp` functionality"
 homepage = "https://github.com/pnkfelix/cee-scape"
-documentation = "https://github.com/pnkfelix/cee-scape"
+documentation = "https://docs.rs/cee-scape/"
 repository = "https://github.com/pnkfelix/cee-scape"
 readme = "README.md"
 
