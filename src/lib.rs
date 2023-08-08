@@ -330,18 +330,18 @@ where
             "call r14",    // ... and invoke the callback
             "1:",            // at this point, rax carries the return value (from either outcome)
 
+            // we let compiler pick this register since we don't need to preseve
+            // it across the first call.
+            tmp = in(reg) setjmp,
             // we use [r12,r13,r14] explicitly as they are always callee-save
             // and thus will be preserved across the call to setjmp.
             in("r12") jbuf_ptr,
             in("r13") closure_env_ptr,
             in("r14") c2r,
-            // we let compiler pick this register since we don't need to preseve
-            // it across the first call.
-            tmp = in(reg) setjmp,
             // we use rax explicitly since we just pass along return register
             // set by the return path (be it normal return or via longjmp).
             out("rax") ret,
-            clobber_abi("sysv64"),
+            clobber_abi("sysv64"), // clobber set reflects call activity, including {eax,rdi,rsi}
         );
 
         ret
@@ -388,19 +388,19 @@ where
             "mov rsi, r13",  // ... and move callback ptrs into position...
             "call r14"  ,    // ... and invoke the callback
             "1:",            // at this point, rax carries the return value (from either outcome)
+            // we let compiler pick this register since we don't need to preseve
+            // it across the first call.
+            sigsetjmp = in(reg) sigsetjmp,
             in("rsi") savemask,
             // we use [r12,r13,r14] explicitly as they are always callee-save
             // and thus will be preserved across the call to setjmp.
             in("r12") jbuf_ptr,
             in("r13") closure_env_ptr,
             in("r14") c2r,
-            // we let compiler pick this register since we don't need to preseve
-            // it across the first call.
-            sigsetjmp = in(reg) sigsetjmp,
             // we use rax explicitly since we just pass along return register
             // set by the return path (be it normal return or via longjmp).
             out("rax") ret,
-            clobber_abi("sysv64"),
+            clobber_abi("sysv64"), // clobber set reflects call activity, including {eax,rdi,rsi}
         );
 
         ret
