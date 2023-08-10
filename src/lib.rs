@@ -176,41 +176,17 @@
 //! ```
 
 use libc::c_int;
-use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
-/// `JmpBufFields` are the accessible fields when viewed via a JmpBuf pointer.
-/// But also: You shouldn't be poking at these!
-#[repr(C)]
-pub struct JmpBufFields {
-    _buf: [u64; 8],
-    _neither_send_nor_sync: PhantomData<*const u8>,
-}
-
-/// `SigJmpBufFields` are the accessible fields when viewed via a SigJmpBuf pointer.
-/// But also: You shouldn't be poking at these!
-#[repr(C)]
-pub struct SigJmpBufFields {
-    // This *must* be the first field. We allow `SigJmpBuf` to be transmuted to
-    // a `JmpBuf` and then back again depending on the host libc. (e.g. glibc
-    // has setjmp as a shallow wrapper around sigsetjmp, and will write to
-    // fields past the `__jmp_buf`).
-    __jmp_buf: JmpBufFields,
-    __mask_was_saved: isize,
-    __saved_mask: libc::sigset_t,
-}
+mod glibc_compat;
+pub use glibc_compat::{JmpBufFields, JmpBufStruct};
+pub use glibc_compat::{SigJmpBufFields, SigJmpBufStruct};
 
 /// This is the type of the first argument that is fed to longjmp.
 pub type JmpBuf = *const JmpBufFields;
 
 /// This is the type of the first argument that is fed to siglongjmp.
 pub type SigJmpBuf = *const SigJmpBufFields;
-
-/// This is the type you use to allocate a JmpBuf on the stack.
-pub type JmpBufStruct = SigJmpBufFields;
-
-/// This is the type you use to allocate a SigJmpBuf on the stack.
-pub type SigJmpBufStruct = SigJmpBufFields;
 
 extern "C" {
     /// Given a calling environment `jbuf` (which one can acquire via
