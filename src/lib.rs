@@ -179,14 +179,16 @@ use libc::c_int;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
-/// This are the accessible fields when viewed via a JmpBuf pointer.
+/// `JmpBufFields` are the accessible fields when viewed via a JmpBuf pointer.
+/// But also: You shouldn't be poking at these!
 #[repr(C)]
 pub struct JmpBufFields {
     _buf: [u64; 8],
     _neither_send_nor_sync: PhantomData<*const u8>,
 }
 
-/// This are the accessible fields when viewed via a SigJmpBuf pointer.
+/// `SigJmpBufFields` are the accessible fields when viewed via a SigJmpBuf pointer.
+/// But also: You shouldn't be poking at these!
 #[repr(C)]
 pub struct SigJmpBufFields {
     // This *must* be the first field. We allow `SigJmpBuf` to be transmuted to
