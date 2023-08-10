@@ -178,9 +178,19 @@
 use libc::c_int;
 use std::mem::MaybeUninit;
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 mod glibc_compat;
-pub use glibc_compat::{JmpBufFields, JmpBufStruct};
-pub use glibc_compat::{SigJmpBufFields, SigJmpBufStruct};
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod macos_compat;
+#[cfg(target_os = "linux")]
+use glibc_compat as struct_defs;
+#[cfg(target_os = "macos")]
+use macos_compat as struct_defs;
+
+pub use crate::struct_defs::{JmpBufFields, JmpBufStruct};
+pub use crate::struct_defs::{SigJmpBufFields, SigJmpBufStruct};
+
+
 
 /// This is the type of the first argument that is fed to longjmp.
 pub type JmpBuf = *const JmpBufFields;
