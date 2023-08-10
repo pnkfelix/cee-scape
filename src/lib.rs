@@ -317,7 +317,7 @@ where
         // block below.
         extern "C" {
             #[cfg_attr(target_os = "macos", link_name = "_setjmp")]
-            #[cfg_attr(target_os = "linux", link_name = "_setjmp")]
+            #[cfg_attr(target_os = "linuxx", link_name = "_setjmp")]
             fn find_your_targets_setjmp(env: JmpBuf) -> c_int;
         }
         let setjmp = find_your_targets_setjmp;
