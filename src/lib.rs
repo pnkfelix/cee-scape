@@ -179,28 +179,36 @@ use libc::c_int;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
+/// This are the accessible fields when viewed via a JmpBuf pointer.
 #[repr(C)]
-pub struct JmpBufStruct {
+pub struct JmpBufFields {
     _buf: [u64; 8],
     _neither_send_nor_sync: PhantomData<*const u8>,
 }
 
-/// This is the type of the first argument that is fed to longjmp.
-pub type JmpBuf = *const JmpBufStruct;
-
-/// This is the type of the first argument that is fed to siglongjmp.
-pub type SigJmpBuf = *const SigJmpBufStruct;
-
+/// This are the accessible fields when viewed via a SigJmpBuf pointer.
 #[repr(C)]
-pub struct SigJmpBufStruct {
+pub struct SigJmpBufFields {
     // This *must* be the first field. We allow `SigJmpBuf` to be transmuted to
     // a `JmpBuf` and then back again depending on the host libc. (e.g. glibc
     // has setjmp as a shallow wrapper around sigsetjmp, and will write to
     // fields past the `__jmp_buf`).
-    __jmp_buf: JmpBufStruct,
+    __jmp_buf: JmpBufFields,
     __mask_was_saved: isize,
     __saved_mask: libc::sigset_t,
 }
+
+/// This is the type of the first argument that is fed to longjmp.
+pub type JmpBuf = *const JmpBufFields;
+
+/// This is the type of the first argument that is fed to siglongjmp.
+pub type SigJmpBuf = *const SigJmpBufFields;
+
+/// This is the type you use to allocate a JmpBuf on the stack.
+pub type JmpBufStruct = SigJmpBufFields;
+
+/// This is the type you use to allocate a SigJmpBuf on the stack.
+pub type SigJmpBufStruct = SigJmpBufFields;
 
 extern "C" {
     /// Given a calling environment `jbuf` (which one can acquire via
@@ -294,11 +302,11 @@ extern "C" {
 /// of the callback can use longjmp to exit early from the call_with_setjmp.
 pub fn call_with_setjmp<F>(mut callback: F) -> c_int
 where
-    F: for<'a> FnOnce(&'a JmpBufStruct) -> c_int,
+    F: for<'a> FnOnce(&'a JmpBufFields) -> c_int,
 {
     extern "C" fn call_from_c_to_rust<F>(jbuf: JmpBuf, closure_env_ptr: *mut F) -> c_int
     where
-        F: for<'a> FnOnce(&'a JmpBufStruct) -> c_int,
+        F: for<'a> FnOnce(&'a JmpBufFields) -> c_int,
     {
         unsafe { (closure_env_ptr.read())(&*jbuf) }
     }
@@ -345,11 +353,11 @@ where
 /// of the callback can use siglongjmp to exit early from the call_with_sigsetjmp.
 pub fn call_with_sigsetjmp<F>(savemask: bool, mut callback: F) -> c_int
 where
-    F: for<'a> FnOnce(&'a SigJmpBufStruct) -> c_int,
+    F: for<'a> FnOnce(&'a SigJmpBufFields) -> c_int,
 {
     extern "C" fn call_from_c_to_rust<F>(jbuf: SigJmpBuf, closure_env_ptr: *mut F) -> c_int
     where
-        F: for<'a> FnOnce(&'a SigJmpBufStruct) -> c_int,
+        F: for<'a> FnOnce(&'a SigJmpBufFields) -> c_int,
     {
         unsafe { (closure_env_ptr.read())(&*jbuf) }
     }
