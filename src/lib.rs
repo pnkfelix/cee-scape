@@ -288,6 +288,7 @@ extern "C" {
 
 /// Covers the usual use case for setjmp: it invokes the callback, and the code
 /// of the callback can use longjmp to exit early from the call_with_setjmp.
+#[inline(never)] // see https://github.com/pnkfelix/cee-scape/issues/14
 pub fn call_with_setjmp<F>(mut callback: F) -> c_int
 where
     F: for<'a> FnOnce(&'a JmpBufFields) -> c_int,
@@ -352,6 +353,7 @@ where
 
 /// Covers the usual use case for sigsetjmp: it invokes the callback, and the code
 /// of the callback can use siglongjmp to exit early from the call_with_sigsetjmp.
+#[inline(never)] // see https://github.com/pnkfelix/cee-scape/issues/14
 pub fn call_with_sigsetjmp<F>(savemask: bool, mut callback: F) -> c_int
 where
     F: for<'a> FnOnce(&'a SigJmpBufFields) -> c_int,
