@@ -299,10 +299,7 @@ where
         unsafe { (closure_env_ptr.read())(&*jbuf) }
     }
     unsafe {
-        // We use `SigJmpBuf` here rather than just `JmpBuf` because some
-        // platforms, like glibc, use the same structure for both (and just have
-        // `setjmp` be a shallow wrapper around `sigsetjmp`).
-        let mut jbuf = MaybeUninit::<SigJmpBufStruct>::zeroed().assume_init();
+        let mut jbuf = MaybeUninit::<JmpBufStruct>::zeroed().assume_init();
         let ret: c_int;
         let jbuf_ptr = std::ptr::addr_of_mut!(jbuf);
         let closure_env_ptr = std::ptr::addr_of_mut!(callback);
