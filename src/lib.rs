@@ -307,6 +307,14 @@ where
         let jbuf_ptr = std::ptr::addr_of_mut!(jbuf);
         let closure_env_ptr = std::ptr::addr_of_mut!(callback);
 
+        // The callback is now effectively owned by `closure_env_ptr` (i.e., the
+        // `closure_env_ptr.read()` call in `call_from_c_to_rust` will take a
+        // direct bitwise copy of its state, and pass that ownership into the
+        // FnOnce::call_once invocation.)
+        //
+        // Therefore, we need to forget about our own ownership of the callback now.
+        std::mem::forget(callback);
+
         // Note: we never call _setjmp from Rust code, just from the assembly
         // block below.
         extern "C" {
@@ -552,5 +560,32 @@ mod tests {
         assert_eq!(cinfo.jb_align, core::mem::align_of::<JmpBufStruct>());
         assert_eq!(cinfo.sigjb_size, core::mem::size_of::<SigJmpBufStruct>());
         assert_eq!(cinfo.sigjb_align, core::mem::align_of::<SigJmpBufStruct>());
+    }
+
+    #[test]
+    fn does_ptr_read_cause_a_double_drop() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        struct IncrementOnDrop(&'static str, &'static AtomicUsize);
+        impl IncrementOnDrop {
+            fn new(name: &'static str, state: &'static AtomicUsize) -> Self {
+                println!("called new for {name}");
+                IncrementOnDrop(name, state)
+            }
+        }
+        impl Drop for IncrementOnDrop {
+            fn drop(&mut self) {
+                println!("called drop on {}", self.0);
+                self.1.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        static STATE: AtomicUsize = AtomicUsize::new(0);
+        let iod = IncrementOnDrop::new("iod", &STATE);
+        call_with_setjmp(move |_env| {
+            println!("at callback start: {}", iod.1.load(Ordering::Relaxed));
+            let _own_it = iod;
+            0
+        });
+        println!("callback done, drop counter: {}", STATE.load(Ordering::Relaxed));
+        assert_eq!(STATE.load(Ordering::Relaxed), 1);
     }
 }
