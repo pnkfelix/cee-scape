@@ -211,6 +211,8 @@ extern "C" {
     /// non-zero value is the only way for the internal machinery to distinguish
     /// between the first return from the initial call versus a non-local
     /// return).
+    ///
+    /// FIXME: include safety note here, including the issues with destructors
     pub fn longjmp(jbuf: JmpBuf, val: c_int) -> !;
 
     /// Given a calling environment `jbuf` (which one can acquire via
@@ -226,11 +228,23 @@ extern "C" {
     /// non-zero value is the only way for the internal machinery to distinguish
     /// between the first return from the initial call versus a non-local
     /// return).
+    ///
+    /// FIXME: include safety note here, including the issues with destructors
     pub fn siglongjmp(jbuf: SigJmpBuf, val: c_int) -> !;
 }
 
+// FIXME: figure out how to access feature cfg'ing. (And then, look into linting
+// against people trying to do "the obvious things".)
+
+#[cfg(not(feature = "use_c_to_interface_with_setjmp"))]
 mod asm_based;
+#[cfg(not(feature = "use_c_to_interface_with_setjmp"))]
 pub use asm_based::{call_with_setjmp, call_with_sigsetjmp};
+
+#[cfg(feature = "use_c_to_interface_with_setjmp")]
+mod cee_based;
+#[cfg(feature = "use_c_to_interface_with_setjmp")]
+pub use cee_based::{call_with_setjmp, call_with_sigsetjmp};
 
 #[cfg(test)]
 mod tests {
