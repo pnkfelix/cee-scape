@@ -9,4 +9,14 @@ fn main() {
     } else {
         panic!("did not see it");
     }
+
+    if std::env::var("CARGO_FEATURE_USE_C_TO_INTERFACE_WITH_SETJMP")
+        .ok()
+        .is_some()
+    {
+        cc::Build::new()
+            .file("src/interop_via_c.c")
+            .compile("interop_via_c");
+    } else {
+    }
 }

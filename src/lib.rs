@@ -211,6 +211,8 @@ extern "C" {
     /// non-zero value is the only way for the internal machinery to distinguish
     /// between the first return from the initial call versus a non-local
     /// return).
+    ///
+    /// FIXME: include safety note here, including the issues with destructors
     pub fn longjmp(jbuf: JmpBuf, val: c_int) -> !;
 
     /// Given a calling environment `jbuf` (which one can acquire via
@@ -226,11 +228,23 @@ extern "C" {
     /// non-zero value is the only way for the internal machinery to distinguish
     /// between the first return from the initial call versus a non-local
     /// return).
+    ///
+    /// FIXME: include safety note here, including the issues with destructors
     pub fn siglongjmp(jbuf: SigJmpBuf, val: c_int) -> !;
 }
 
+// FIXME: figure out how to access feature cfg'ing. (And then, look into linting
+// against people trying to do "the obvious things".)
+
+#[cfg(not(feature = "use_c_to_interface_with_setjmp"))]
 mod asm_based;
+#[cfg(not(feature = "use_c_to_interface_with_setjmp"))]
 pub use asm_based::{call_with_setjmp, call_with_sigsetjmp};
+
+#[cfg(feature = "use_c_to_interface_with_setjmp")]
+mod cee_based;
+#[cfg(feature = "use_c_to_interface_with_setjmp")]
+pub use cee_based::{call_with_setjmp, call_with_sigsetjmp};
 
 #[cfg(test)]
 mod tests {
@@ -380,31 +394,87 @@ mod tests {
         assert_eq!(cinfo.sigjb_size, core::mem::size_of::<SigJmpBufStruct>());
         assert_eq!(cinfo.sigjb_align, core::mem::align_of::<SigJmpBufStruct>());
     }
+}
+
+#[cfg(test)]
+mod tests_of_drop_interaction {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use super::{call_with_setjmp, call_with_sigsetjmp};
+    struct IncrementOnDrop(&'static str, &'static AtomicUsize);
+    impl IncrementOnDrop {
+        fn new(name: &'static str, state: &'static AtomicUsize) -> Self {
+            println!("called new for {name}");
+            IncrementOnDrop(name, state)
+        }
+    }
+    impl Drop for IncrementOnDrop {
+        fn drop(&mut self) {
+            println!("called drop on {}", self.0);
+            self.1.fetch_add(1, Ordering::Relaxed);
+        }
+    }
 
     #[test]
-    fn does_ptr_read_cause_a_double_drop() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
-        struct IncrementOnDrop(&'static str, &'static AtomicUsize);
-        impl IncrementOnDrop {
-            fn new(name: &'static str, state: &'static AtomicUsize) -> Self {
-                println!("called new for {name}");
-                IncrementOnDrop(name, state)
-            }
-        }
-        impl Drop for IncrementOnDrop {
-            fn drop(&mut self) {
-                println!("called drop on {}", self.0);
-                self.1.fetch_add(1, Ordering::Relaxed);
-            }
-        }
+    fn does_ptr_read_cause_a_double_drop_for_setjmp() {
         static STATE: AtomicUsize = AtomicUsize::new(0);
         let iod = IncrementOnDrop::new("iod", &STATE);
         call_with_setjmp(move |_env| {
-            println!("at callback start: {}", iod.1.load(Ordering::Relaxed));
+            println!("at callback 1 start: {}", iod.1.load(Ordering::Relaxed));
             let _own_it = iod;
             0
         });
         println!("callback done, drop counter: {}", STATE.load(Ordering::Relaxed));
         assert_eq!(STATE.load(Ordering::Relaxed), 1);
+        let iod = IncrementOnDrop::new("iod", &STATE);
+        call_with_setjmp(move |_env| {
+            println!("at callback 2 start: {}", iod.1.load(Ordering::Relaxed));
+            let _own_it = iod;
+            0
+        });
+        println!("callback done, drop counter: {}", STATE.load(Ordering::Relaxed));
+        assert_eq!(STATE.load(Ordering::Relaxed), 2);
+    }
+
+    #[test]
+    fn does_ptr_read_cause_a_double_drop_for_sigsetjmp() {
+        static STATE: AtomicUsize = AtomicUsize::new(0);
+        let iod = IncrementOnDrop::new("iod", &STATE);
+        call_with_sigsetjmp(false, move |_env| {
+            println!("at callback 3 start: {}", iod.1.load(Ordering::Relaxed));
+            let _own_it = iod;
+            0
+        });
+        println!("callback done, drop counter: {}", STATE.load(Ordering::Relaxed));
+        assert_eq!(STATE.load(Ordering::Relaxed), 1);
+        let iod = IncrementOnDrop::new("iod", &STATE);
+        call_with_sigsetjmp(true, move |_env| {
+            println!("at callback 4 start: {}", iod.1.load(Ordering::Relaxed));
+            let _own_it = iod;
+            0
+        });
+        println!("callback done, drop counter: {}", STATE.load(Ordering::Relaxed));
+        assert_eq!(STATE.load(Ordering::Relaxed), 2);
+    }
+
+    // FIXME: This test probably shouldn't be written this way. The intended safety property
+    // for calling longjmp is that there *are no* destructors waiting to run between the
+    // longjmp and its associated setjmp (and that we otherwise have UB).
+    #[test]
+    fn mix_drop_with_longjmp() {
+        use crate::longjmp;
+
+        static STATE: AtomicUsize = AtomicUsize::new(0);
+        // The above cases were checking that "normal" control flow,
+        // with no longjmp's involved, would not cause a double-drop.
+        // But as soon as longjmp is in the mix, we can no lonbger
+        // guarantee that the closure passed into call_with_setjmp will be dropped
+        let iod = IncrementOnDrop::new("iod", &STATE);
+        call_with_setjmp(move |env1| {
+            println!("at callback 1 start: {}", iod.1.load(Ordering::Relaxed));
+            let _own_it = iod;
+            unsafe { longjmp(env1, 4) }
+        });
+        println!("callback done, drop counter: {}", STATE.load(Ordering::Relaxed));
+        assert_eq!(STATE.load(Ordering::Relaxed), 0);
     }
 }
