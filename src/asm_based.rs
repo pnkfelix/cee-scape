@@ -129,6 +129,11 @@ where
     where
         F: for<'a> FnOnce(&'a JmpBufFields) -> c_int,
     {
+        // Dereference `closure_env_ptr` with .read() to acquire ownership of
+        // the FnOnce object, then call it. (See also the forget note below.)
+        //
+        // Note that `closure_env_ptr` is not a raw function pointer, it's a
+        // pointer to a FnOnce; the code we call comes from the generic `F`.
         unsafe { (closure_env_ptr.read())(&*jbuf) }
     }
     unsafe {
@@ -173,6 +178,11 @@ where
     where
         F: for<'a> FnOnce(&'a SigJmpBufFields) -> c_int,
     {
+        // Dereference `closure_env_ptr` with .read() to acquire ownership of
+        // the FnOnce object, then call it. (See also the forget note below.)
+        //
+        // Note that `closure_env_ptr` is not a raw function pointer, it's a
+        // pointer to a FnOnce; the code we call comes from the generic `F`.
         unsafe { (closure_env_ptr.read())(&*jbuf) }
     }
 
