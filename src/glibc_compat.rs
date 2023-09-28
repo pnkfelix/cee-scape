@@ -22,6 +22,7 @@ pub struct SigJmpBufFields {
 }
 
 /// This is the type you use to allocate a JmpBuf on the stack.
+/// (Glibc puns the two.)
 pub type JmpBufStruct = SigJmpBufFields;
 
 /// This is the type you use to allocate a SigJmpBuf on the stack.
