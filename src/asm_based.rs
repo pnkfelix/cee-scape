@@ -57,12 +57,12 @@
 use crate::{JmpBuf, JmpBufFields, JmpBufStruct};
 use crate::{SigJmpBuf, SigJmpBufFields, SigJmpBufStruct};
 use libc::c_int;
-use std::mem::MaybeUninit;
+use core::mem::MaybeUninit;
 
 #[cfg(target_arch = "x86_64")]
 macro_rules! maybesig_setjmp_asm {
     ($setjmp:ident, $jbuf_ptr:ident, $ifsig_savemask:ident, $closure_env_ptr:ident, $c2r:ident, $ret:ident) => {
-        std::arch::asm!(
+        core::arch::asm!(
             // savemask is already in position rsi..
             "mov rdi, r12",  // move jbuf_ptr into arg position for sigsetjmp call
             "call {tmp}",    // fills in jbuf; future longjmp calls go here.
@@ -93,7 +93,7 @@ macro_rules! maybesig_setjmp_asm {
 #[cfg(target_arch = "aarch64")]
 macro_rules! maybesig_setjmp_asm {
     ($sigsetjmp:ident, $jbuf_ptr:ident, $ifsig_savemask:ident, $closure_env_ptr:ident, $c2r:ident, $ret:ident) => {
-        std::arch::asm!(
+        core::arch::asm!(
             // savemask, if needed, is already in x1
             "mov x0, x21", // move saved jbuf_ptr to sigsetjmp param position. (savemask is already in position)
             "blr {tmp}",   // fills in jbuf; future longjmp calls go here.
@@ -139,8 +139,8 @@ where
     unsafe {
         let mut jbuf = MaybeUninit::<JmpBufStruct>::zeroed().assume_init();
         let ret: c_int;
-        let jbuf_ptr = std::ptr::addr_of_mut!(jbuf);
-        let closure_env_ptr = std::ptr::addr_of_mut!(callback);
+        let jbuf_ptr = core::ptr::addr_of_mut!(jbuf);
+        let closure_env_ptr = core::ptr::addr_of_mut!(callback);
 
         // The callback is now effectively owned by `closure_env_ptr` (i.e., the
         // `closure_env_ptr.read()` call in `call_from_c_to_rust` will take a
@@ -148,7 +148,7 @@ where
         // FnOnce::call_once invocation.)
         //
         // Therefore, we need to forget about our own ownership of the callback now.
-        std::mem::forget(callback);
+        core::mem::forget(callback);
 
         // Note: we never call _setjmp from Rust code, just from the assembly
         // block below.
@@ -191,8 +191,8 @@ where
     unsafe {
         let mut jbuf = MaybeUninit::<SigJmpBufStruct>::zeroed().assume_init();
         let ret: c_int;
-        let jbuf_ptr = std::ptr::addr_of_mut!(jbuf);
-        let closure_env_ptr = std::ptr::addr_of_mut!(callback);
+        let jbuf_ptr = core::ptr::addr_of_mut!(jbuf);
+        let closure_env_ptr = core::ptr::addr_of_mut!(callback);
 
         // The callback is now effectively owned by `closure_env_ptr` (i.e., the
         // `closure_env_ptr.read()` call in `call_from_c_to_rust` will take a
@@ -200,7 +200,7 @@ where
         // FnOnce::call_once invocation.)
         //
         // Therefore, we need to forget about our own ownership of the callback now.
-        std::mem::forget(callback);
+        core::mem::forget(callback);
 
         // Note: we never call _setjmp from Rust code, just from the assembly
         // block below.
