@@ -30,7 +30,7 @@ where
     }
 
     unsafe {
-        let closure_env_ptr = std::ptr::addr_of_mut!(callback);
+        let closure_env_ptr = core::ptr::addr_of_mut!(callback);
 
         // The callback is now effectively owned by `closure_env_ptr` (i.e., the
         // `closure_env_ptr.read()` call in `call_from_c_to_rust` will take a
@@ -38,7 +38,7 @@ where
         // FnOnce::call_once invocation.)
         //
         // Therefore, we need to forget about our own ownership of the callback now.
-        std::mem::forget(callback);
+        core::mem::forget(callback);
 
         call_closure_with_setjmp(closure_env_ptr as *mut c_void, call_from_c_to_rust::<F>)
     }
@@ -66,7 +66,7 @@ where
     let savemask: c_int = if savemask { 1 } else { 0 };
 
     unsafe {
-        let closure_env_ptr = std::ptr::addr_of_mut!(callback);
+        let closure_env_ptr = core::ptr::addr_of_mut!(callback);
 
         // The callback is now effectively owned by `closure_env_ptr` (i.e., the
         // `closure_env_ptr.read()` call in `call_from_c_to_rust` will take a
@@ -74,7 +74,7 @@ where
         // FnOnce::call_once invocation.)
         //
         // Therefore, we need to forget about our own ownership of the callback now.
-        std::mem::forget(callback);
+        core::mem::forget(callback);
 
         call_closure_with_sigsetjmp(savemask, closure_env_ptr as *mut c_void, call_from_c_to_rust::<F>)
     }

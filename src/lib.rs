@@ -174,7 +174,7 @@
 //!     })
 //! });
 //! ```
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use libc::c_int;
 
