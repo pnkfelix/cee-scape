@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 /// `JmpBufFields` are the accessible fields when viewed via a JmpBuf pointer.
 /// But also: You shouldn't be poking at these!

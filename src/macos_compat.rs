@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 #[cfg(target_arch = "aarch64")]
 const JMP_BUF_SIZE: usize = 48;
