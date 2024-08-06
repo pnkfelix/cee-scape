@@ -56,8 +56,8 @@
 
 use crate::{JmpBuf, JmpBufFields, JmpBufStruct};
 use crate::{SigJmpBuf, SigJmpBufFields, SigJmpBufStruct};
-use libc::c_int;
 use core::mem::MaybeUninit;
+use libc::c_int;
 
 #[cfg(target_arch = "x86_64")]
 macro_rules! maybesig_setjmp_asm {
@@ -114,6 +114,34 @@ macro_rules! maybesig_setjmp_asm {
             in("x21") $jbuf_ptr,
             in("x22") $c2r,
             clobber_abi("C"), // clobber abi reflects call effects, including {x0,x1,x2,x3}...
+        );
+    }
+}
+
+#[cfg(any(target_arch = "riscv32", target_arch = "riscv64"))]
+macro_rules! maybesig_setjmp_asm {
+    ($sigsetjmp:ident, $jbuf_ptr:ident, $ifsig_savemask:ident, $closure_env_ptr:ident, $c2r:ident, $ret:ident) => {
+        core::arch::asm!(
+            // savemask, if needed, is already in a1
+            "mv a0, s3",     // move saved jbuf_ptr to sigsetjmp param position. (savemask is already in position)
+            "jalr 0({tmp})", // fills in jbuf; future longjmp calls go here.
+            "bnez a0, 1f",   // if return value non-zero, skip the callback invocation
+                             // (and if return value non-zero, we cannot assume register state has been restored!)
+            "mv a0, s3",     // move saved jmp buf into callback's arg position
+            "mv a1, s2",     // move saved closure env into callback's arg position
+            "jalr 0(s4)",    // invoke the callback
+            "1:",            // at this point, a0 carries the return value (from either outcome)
+            // we let compiler pick this register since we don't need to preseve
+            // it across the first call.
+            tmp = in(reg) $sigsetjmp,
+            in("a1") $ifsig_savemask, // savemask arg position for sigsetjmp
+            out("a0") $ret, // the output will be stored here.
+            // [s2,s3,s4] are all callee-save registers for the normal sigsetjmp return.
+            // we will have them to reference.
+            in("s2") $closure_env_ptr,
+            in("s3") $jbuf_ptr,
+            in("s4") $c2r,
+            clobber_abi("C"), // clobber abi reflects call effects, including {x1,x5,x6,x7}...
         );
     }
 }

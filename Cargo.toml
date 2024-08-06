@@ -9,6 +9,7 @@ homepage = "https://github.com/pnkfelix/cee-scape"
 documentation = "https://docs.rs/cee-scape/"
 repository = "https://github.com/pnkfelix/cee-scape"
 readme = "README.md"
+build = "build/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

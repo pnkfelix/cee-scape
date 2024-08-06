@@ -2,11 +2,18 @@ use crate::{JmpBuf, JmpBufFields};
 use crate::{SigJmpBuf, SigJmpBufFields};
 use libc::{c_int, c_void};
 
-#[link(name = "interop_via_c", kind="static")]
+#[link(name = "interop_via_c", kind = "static")]
 extern "C" {
-    fn call_closure_with_setjmp(closure_env_ptr: *mut c_void, closure_code: extern "C" fn(jbuf: *const JmpBufFields, env_ptr: *mut c_void) -> c_int) -> c_int;
+    fn call_closure_with_setjmp(
+        closure_env_ptr: *mut c_void,
+        closure_code: extern "C" fn(jbuf: *const JmpBufFields, env_ptr: *mut c_void) -> c_int,
+    ) -> c_int;
 
-    fn call_closure_with_sigsetjmp(savemask: c_int, closure_env_ptr: *mut c_void, closure_code: extern "C" fn(jbuf: *const SigJmpBufFields, env_ptr: *mut c_void) -> c_int) -> c_int;
+    fn call_closure_with_sigsetjmp(
+        savemask: c_int,
+        closure_env_ptr: *mut c_void,
+        closure_code: extern "C" fn(jbuf: *const SigJmpBufFields, env_ptr: *mut c_void) -> c_int,
+    ) -> c_int;
 }
 
 /// Covers the usual use case for setjmp: it invokes the callback, and the code
@@ -76,6 +83,10 @@ where
         // Therefore, we need to forget about our own ownership of the callback now.
         core::mem::forget(callback);
 
-        call_closure_with_sigsetjmp(savemask, closure_env_ptr as *mut c_void, call_from_c_to_rust::<F>)
+        call_closure_with_sigsetjmp(
+            savemask,
+            closure_env_ptr as *mut c_void,
+            call_from_c_to_rust::<F>,
+        )
     }
 }

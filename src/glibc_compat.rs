@@ -1,10 +1,16 @@
 use core::marker::PhantomData;
 
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+const JMP_BUF_SIZE: usize = 8;
+
+#[cfg(target_arch = "riscv64")]
+const JMP_BUF_SIZE: usize = 14 /* pc + regs + sp */ + crate::riscv64::floating_point_registers();
+
 /// `JmpBufFields` are the accessible fields when viewed via a JmpBuf pointer.
 /// But also: You shouldn't be poking at these!
 #[repr(C)]
 pub struct JmpBufFields {
-    _buf: [u64; 8],
+    _buf: [u64; JMP_BUF_SIZE],
     _neither_send_nor_sync: PhantomData<*const u8>,
 }
 
