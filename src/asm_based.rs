@@ -155,6 +155,7 @@ where
         extern "C" {
             #[cfg_attr(target_os = "macos", link_name = "_setjmp")]
             #[cfg_attr(target_os = "linux", link_name = "_setjmp")]
+            #[cfg_attr(target_os = "freebsd", link_name = "setjmp")]
             fn find_your_targets_setjmp(env: JmpBuf) -> c_int;
         }
         let setjmp = find_your_targets_setjmp;
@@ -207,6 +208,7 @@ where
         extern "C" {
             #[cfg_attr(target_os = "macos", link_name = "sigsetjmp")]
             #[cfg_attr(target_os = "linux", link_name = "__sigsetjmp")]
+            #[cfg_attr(target_os = "freebsd", link_name = "sigsetjmp")]
             fn find_your_targets_sigsetjmp(env: SigJmpBuf, savemask: c_int) -> c_int;
         }
         let sigsetjmp = find_your_targets_sigsetjmp;

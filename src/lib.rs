@@ -182,10 +182,14 @@ use libc::c_int;
 mod glibc_compat;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod macos_compat;
+#[cfg_attr(not(target_os = "freebsd"), allow(dead_code))]
+mod freebsd_compat;
 #[cfg(target_os = "linux")]
 use glibc_compat as struct_defs;
 #[cfg(target_os = "macos")]
 use macos_compat as struct_defs;
+#[cfg(target_os = "freebsd")]
+use freebsd_compat as struct_defs;
 
 pub use crate::struct_defs::{JmpBufFields, JmpBufStruct};
 pub use crate::struct_defs::{SigJmpBufFields, SigJmpBufStruct};
