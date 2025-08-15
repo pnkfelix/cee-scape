@@ -2,9 +2,18 @@ use core::marker::PhantomData;
 
 /// `JmpBufFields` are the accessible fields when viewed via a JmpBuf pointer.
 /// But also: You shouldn't be poking at these!
+
+#[cfg(target_arch = "x86_64")]
 #[repr(C)]
 pub struct JmpBufFields {
     _buf: [u64; 8],
+    _neither_send_nor_sync: PhantomData<*const u8>,
+}
+
+#[cfg(target_arch = "aarch64")]
+#[repr(C)]
+pub struct JmpBufFields {
+    _buf: [u64; 22],
     _neither_send_nor_sync: PhantomData<*const u8>,
 }
 
